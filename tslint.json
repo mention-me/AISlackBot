@@ -1,0 +1,83 @@
+{
+  "extends": [
+    "tslint:recommended",
+    "tslint-eslint-rules"
+  ],
+  "jsRules": {
+    "semicolon": [
+      true,
+      "always"
+    ],
+    "quotemark": [
+      true,
+      "single",
+      "jsx-double"
+    ],
+    "interface-name": false,
+    "trailing-comma": [
+      true,
+      {
+        "multiline": {
+          "functions": "never"
+        }
+      }
+    ],
+    "object-literal-sort-keys": false,
+    "no-trailing-whitespace": [
+      true,
+      "ignore-blank-lines"
+    ],
+    "no-unused-expression": false,
+    "no-unexpected-multiline": true
+  },
+  "rules": {
+    "semicolon": [
+      true,
+      "never"
+    ],
+    "quotemark": [
+      true,
+      "single",
+      "jsx-double"
+    ],
+    "interface-name": false,
+    "trailing-comma": [
+      true,
+      {
+        "multiline": {
+          "functions": "never"
+        }
+      }
+    ],
+    "object-literal-sort-keys": false,
+    "no-trailing-whitespace": [
+      true,
+      "ignore-blank-lines"
+    ],
+    "no-var-requires": false,
+    "no-unused-expression": false,
+    "no-console": false,
+    "jsx-no-multiline-js": false,
+    "jsx-alignment": false,
+    "import-blacklist": [
+      true,
+      "react-bootstrap"
+    ],
+    "no-unexpected-multiline": true,
+    "ordered-imports": [
+      true,
+      {
+        "grouped-imports": true
+      }
+    ],
+    "member-ordering": [
+      true,
+      {
+        "order": "instance-sandwich"
+      }
+    ]
+  },
+  "rulesDirectory": [
+  ],
+  "defaultSeverity": "warning"
+}
