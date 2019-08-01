@@ -449,15 +449,15 @@ loadClassifier()
 //app.listen(port, () => console.log(`App listening on port ${port}!`))
 
 //If verifying, comment out the app.listen line above and uncomment the below
-
-let exec = require('child_process').exec,
-    child
-
-child = exec('./node_modules/.bin/slack-verify --path=/slack/events --secret ' + process.env.SLACK_SIGNING_SECRET + ' --port=' + port,
-    (error: any, stdout: any, stderr: any) => {
-        console.log('stdout:', stdout)
-        console.log('stderr:', stderr)
-        if (error !== null) {
-            console.log('exec error:', error)
-        }
-    })
+//
+// let exec = require('child_process').exec,
+//     child
+//
+// child = exec('./node_modules/.bin/slack-verify --path=/slack/events --secret ' + process.env.SLACK_SIGNING_SECRET + ' --port=' + port,
+//     (error: any, stdout: any, stderr: any) => {
+//         console.log('stdout:', stdout)
+//         console.log('stderr:', stderr)
+//         if (error !== null) {
+//             console.log('exec error:', error)
+//         }
+//     })
