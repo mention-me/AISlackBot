@@ -1,5 +1,6 @@
 import * as DotEnv from 'dotenv'
 import express from 'express'
+import * as fs from 'fs'
 import {BayesClassifierClassification, LogisticRegressionClassifier} from 'natural'
 import uniqid from 'uniqid'
 
@@ -19,7 +20,7 @@ import {QAStorage} from './Utils/StorageUtils'
 
 DotEnv.config()
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT
 const PROBABILITY_HARD_CUTOFF = 0.28
 
 const app = express()
@@ -29,16 +30,59 @@ const storage = new QAStorage('storage/qaData')
 const slackUtils = new SlackUtils()
 
 let classifier: LogisticRegressionClassifier
-
+let classifierTrained = false
 /**
  * ./ngrok http -subdomain=subdomain 3000
  */
+
+const loadClassifier = async () => {
+
+    // If no corpus, not much point in loading the classifier, so reinitialise
+    if (!fs.existsSync('storage/qaData.json')) {
+        console.log('No corpus found, initialising empty corpus')
+        fs.appendFileSync('storage/qaData.json', '{}')
+        trainClassifier()
+        return
+    }
+
+    if (!fs.existsSync('storage/classifier.json')) {
+        console.log('No existing classifier found. Training from existing corpus.')
+        trainClassifier()
+        return
+    }
+
+    // If file storage/classifier.json exists, load it
+    console.log('Found existing classifier, loading it')
+
+    // @ts-ignore
+    LogisticRegressionClassifier.load('./storage/classifier.json', null, (err, loadedClassifier) => {
+        if (!err) {
+            console.log('Loaded classifier from file')
+            classifier = loadedClassifier
+            classifierTrained = true
+            return
+        }
+
+        console.error('Failed to load classifier - corrupted file?')
+        process.exit(-1)
+    })
+}
 
 /**
  * Initialise the classifier so we're ready to go!
  */
 const trainClassifier = async () => {
-    classifier = await ClassifierUtils.trainFromDb(storage.getDb(), './storage/classifier.json')
+    console.log('Training classifier')
+    const trainedClassifier = await ClassifierUtils.trainFromDb(storage.getDb(), './storage/classifier.json')
+
+    if (null !== trainedClassifier) {
+        console.log('Classifier trained')
+        classifier = trainedClassifier
+        classifierTrained = true
+        return
+    }
+    console.log('Classifier could not be trained')
+
 }
 
 /**
@@ -329,21 +373,38 @@ const acquireImproveExistingAnswer = async (
  * @param event
  */
 const handleIncomingSlackMessage = async (message: string, event: MessageEvent) => {
+
+    if (process.env.SLACK_CHANNEL !== event.channel) {
+        // Message in another channel than we're interested in. Bail out.
+        return
+    }
+
+    console.log(event.ts + ' Receieved message: ' + message)
+
     // Work out context
     const isQuestion = message.indexOf('?') > -1
     const replyId = event.ts
     const isThread = event.thread_ts != null
 
     if (isQuestion && !isThread) {
+        console.log(event.ts + ' Message is a question')
+
+        if (!classifierTrained) {
+            startNewQuestionAnswerAcquision(message, replyId)
+            return
+        }
+
         interpretQuestionAndGuessAnswer(message, replyId)
         return
     }
 
     if (event.thread_ts == null) {
+        console.log(event.ts + ' Not a thread, so ignoring as likely general message in channel')
         return
     }
 
     // If we get here, the message is a reply to a thread
+    console.log(event.ts + ' Reply to a thread')
 
     const threadContents = await slackUtils.getThread(event.thread_ts)
 
@@ -351,6 +412,7 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
     const acquisitionId = SlackUtils.tryGetAcquisitionId(threadContents)
 
     if (null === acquisitionId) {
+        console.log(event.ts + ' No acquisition found, dont think this thread is a question needing an answer')
         return
     }
 
@@ -358,6 +420,7 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
     const aquisition = stateCache.getAcquisitionState(acquisitionId)
 
     if (null !== aquisition) {
+        console.log(event.ts + ' Found acquisition id: ' + acquisitionId)
         acquireNewQuestionAnswer(message, aquisition, event.thread_ts)
         return
     }
@@ -366,6 +429,7 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
     const improveAnswerAquisition = stateCache.getImproveAnswerAcquisitionState(acquisitionId)
 
     if (null !== improveAnswerAquisition) {
+        console.log(event.ts + ' Improving existing question with id: ' + acquisitionId)
         acquireImproveExistingAnswer(message, improveAnswerAquisition, event.thread_ts)
         return
     }
@@ -380,5 +444,20 @@ app.use('/slack/actions',
     new SlackInteractionsMiddleware(stateCache, processFeedbackOnGuessedAnswer).getMiddleware()
 )
 
-trainClassifier()
+loadClassifier()
+
 app.listen(port, () => console.log(`App listening on port ${port}!`))
+
+//If verifying, comment out the app.listen line above and uncomment the below
+
+let exec = require('child_process').exec,
+    child
+
+child = exec('./node_modules/.bin/slack-verify --path=/slack/events --secret ' + process.env.SLACK_SIGNING_SECRET + ' --port=' + port,
+    (error: any, stdout: any, stderr: any) => {
+        console.log('stdout:', stdout)
+        console.log('stderr:', stderr)
+        if (error !== null) {
+            console.log('exec error:', error)
+        }
+    })

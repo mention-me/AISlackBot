@@ -73,7 +73,7 @@ export class SlackUtils {
      * @param threadContents
      */
     public static tryGetAcquisitionId = (threadContents: MessageThreadEvent): string | null => {
-        if (MessageSubtypes.BOT_MESSAGE === threadContents.messages[0].subtype) {
+        if (MessageSubtypes.BOT_MESSAGE !== threadContents.messages[0].subtype) {
             return null
         }
 

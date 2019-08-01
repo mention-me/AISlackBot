@@ -12,8 +12,11 @@ export const trainFromDb = async (db: JsonDB, outputLocation: string) => {
     // Given our database, get all the questions and answers
     const trainingData = db.getData('/')
 
+    let documentCount = 0
+
     // For each question "label", add the variants to the classifier
     Object.keys(trainingData).forEach((element) => {
+        documentCount++
         const documment: QuestionWithAnswer = trainingData[element]
 
         documment.questions.forEach((question: string) => {
@@ -22,6 +25,10 @@ export const trainFromDb = async (db: JsonDB, outputLocation: string) => {
         })
 
     })
+
+    if (documentCount === 0) {
+        return null
+    }
 
     // Now all of the documents are in the classifier we can train the system
     messageClassifier.train()
