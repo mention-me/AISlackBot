@@ -446,7 +446,7 @@ app.use('/slack/actions',
 
 loadClassifier()
 
-//app.listen(port, () => console.log(`App listening on port ${port}!`))
+app.listen(port, () => console.log(`App listening on port ${port}!`))
 
 //If verifying, comment out the app.listen line above and uncomment the below
 //
