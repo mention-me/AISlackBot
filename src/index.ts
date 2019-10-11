@@ -389,7 +389,11 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
     if (isQuestion && !isThread) {
         console.log(event.ts + ' Message is a question')
 
+        console.log("--" + message.indexOf('***! ') + "---");
+        
+        
         if (!classifierTrained || message.indexOf('***! ') >= -1) {
+            console.log("in here");
             message = message.replace('***! ', '');
             startNewQuestionAnswerAcquision(message, replyId)
             return
