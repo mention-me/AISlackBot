@@ -21,7 +21,7 @@ import {QAStorage} from './Utils/StorageUtils'
 DotEnv.config()
 
 const port = process.env.PORT
-const PROBABILITY_HARD_CUTOFF = 0.55
+const PROBABILITY_HARD_CUTOFF = 0.65
 
 const app = express()
 
@@ -389,11 +389,8 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
     if (isQuestion && !isThread) {
         console.log(event.ts + ' Message is a question')
 
-        console.log("--" + message.indexOf('***! ') + "---");
-        
-        
+        // Allow a param to force it to get the answer for a new question.
         if (!classifierTrained || message.indexOf('***! ') > -1) {
-            console.log("in here");
             message = message.replace('***! ', '');
             startNewQuestionAnswerAcquision(message, replyId)
             return
