@@ -392,7 +392,7 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
         console.log("--" + message.indexOf('***! ') + "---");
         
         
-        if (!classifierTrained || message.indexOf('***! ') >= -1) {
+        if (!classifierTrained || message.indexOf('***! ') > -1) {
             console.log("in here");
             message = message.replace('***! ', '');
             startNewQuestionAnswerAcquision(message, replyId)
