@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./lib/index.js",
+    "startpoll": "node ./lib/poller.js",
     "dev": "ts-node ./src/index.ts",
+    "poll": "ts-node ./src/poller.ts",
     "proto": "ts-node ./src/slack.ts"
   },
   "author": "Matt Gill",

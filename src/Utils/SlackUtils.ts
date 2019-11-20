@@ -68,6 +68,18 @@ export class SlackUtils {
     }
 
     /**
+     * Send a huge blob of text
+     *
+     * @param content
+     */
+    public sendTextSnippet = (content: string) => {
+        this.webClient.files.upload({
+            channels: this.slackChannel,
+            content
+        })
+    }
+
+    /**
      * Given a thread event, try and obtain an acquisition code if present, otherwise return null
      *
      * @param threadContents

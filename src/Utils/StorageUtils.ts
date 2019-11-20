@@ -18,9 +18,11 @@ export class QAStorage {
      */
     public updateAnswer = (label: string, answer: string) => {
 
-        const existingAnswer = this.getQuestionWithAnswerFromLabel(label)
+        let existingAnswer = this.getQuestionWithAnswerFromLabel(label)
 
         existingAnswer.answer = answer
+
+        existingAnswer = this.addAnswerAsQuestionToAnswer(existingAnswer)
 
         this.db.push('/' + label, existingAnswer)
     }
@@ -41,6 +43,8 @@ export class QAStorage {
             labelledQuestionWithAnswer.label = label
         }
 
+        labelledQuestionWithAnswer = this.addAnswerAsQuestionToAnswer(labelledQuestionWithAnswer)
+
         this.db.push('/' + label, labelledQuestionWithAnswer)
     }
 
@@ -58,5 +62,26 @@ export class QAStorage {
 
     public getDb = (): JsonDB => {
         return this.db
+    }
+
+    /**
+     * Often, the answer to the question is already in the answer (if that makes sense). So let's say for example
+     * The answer is:
+     *  "The tempersature of the office is 30 degrees!"
+     *
+     *  An appropriate question might be
+     *  "What is the temperature of the office?"
+     *
+     *  So this function adds the answer to the list of questions which match the answer so the classifier can
+     *  use it as a heuristic to finding the same answer (as well as the questions).
+     */
+    private addAnswerAsQuestionToAnswer = (questionWithAnswer: QuestionWithAnswer): QuestionWithAnswer => {
+        const answer = questionWithAnswer.answer
+
+        if (!questionWithAnswer.questions.includes(answer) && answer.length > 1) {
+            questionWithAnswer.questions.push(answer)
+        }
+
+        return questionWithAnswer
     }
 }

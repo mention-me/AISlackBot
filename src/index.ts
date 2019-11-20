@@ -1,7 +1,7 @@
 import * as DotEnv from 'dotenv'
 import express from 'express'
 import * as fs from 'fs'
-import {BayesClassifierClassification, LogisticRegressionClassifier} from 'natural'
+import {LogisticRegressionClassification, LogisticRegressionClassifier} from 'natural'
 import uniqid from 'uniqid'
 
 import {AnswerFeedbackResponses} from './Enums/Internal/AnswerFeedbackResponses'
@@ -41,13 +41,11 @@ const loadClassifier = async () => {
     if (!fs.existsSync('storage/qaData.json')) {
         console.log('No corpus found, initialising empty corpus')
         fs.appendFileSync('storage/qaData.json', '{}')
-        trainClassifier()
         return
     }
 
     if (!fs.existsSync('storage/classifier.json')) {
         console.log('No existing classifier found. Training from existing corpus.')
-        trainClassifier()
         return
     }
 
@@ -69,9 +67,11 @@ const loadClassifier = async () => {
 }
 
 /**
- * Initialise the classifier so we're ready to go!
+ * This is a BLOCKING FUNCTION which retrains and reloads the classifier.
+ * This is not used currently because we train the classifier in a separate thread
+ * @see poller.ts
  */
-const trainClassifier = async () => {
+const trainClassifierWork = async () => {
     console.log('Training classifier')
     const trainedClassifier = await ClassifierUtils.trainFromDb(storage.getDb(), './storage/classifier.json')
 
@@ -115,6 +115,7 @@ const interpretQuestionAndGuessAnswer = (question: string, threadId: string) => 
     sendAnswerAndGatherFeedback(
         question,
         labelledQuestionWithAnswer,
+        interpretation.probability,
         interpretation.probabilities,
         threadId
     )
@@ -126,19 +127,29 @@ const interpretQuestionAndGuessAnswer = (question: string, threadId: string) => 
  *
  * @param usersQuestion
  * @param guessedAnswer
+ * @param probability
  * @param classifications
  * @param threadId
  */
 const sendAnswerAndGatherFeedback = (
     usersQuestion: string,
     guessedAnswer: QuestionWithAnswer,
-    classifications: BayesClassifierClassification[],
+    probability: number,
+    classifications: LogisticRegressionClassification[],
     threadId: string) => {
+
+    const percent = Math.round(probability * 100)
 
     // e.g:
     // This is the answer
     // [Good answer] [Bad answer] [Needs improvement]
-    slackUtils.sendMessageWithAttachments(guessedAnswer.answer, MessageAttachments.AnswerFeedbackButtons, threadId)
+    // Conf. 88.2%
+    const attachments = [
+        MessageAttachments.AnswerFeedbackButtonsAttachment,
+        MessageAttachments.getFooterAttachment('Conf. ' + percent + '%')
+    ]
+
+    slackUtils.sendMessageWithAttachments(guessedAnswer.answer, attachments, threadId)
 
     stateCache.setThreadState(threadId, {
         threadId,
@@ -178,7 +189,6 @@ const processFeedbackOnGuessedAnswer = async (
                 threadContext.classifications[0].label
             )
 
-            trainClassifier()
         }
 
         slackUtils.sendMessage('Thanks for letting me know!', threadContext.threadId)
@@ -222,6 +232,7 @@ const processFeedbackOnGuessedAnswer = async (
 const sendNextBestQuestionGuess = async (question: string, threadContext: ThreadContextGuessedAnswer) => {
 
     const bestClassification = threadContext.classifications[0]
+    const probability = bestClassification.value
 
     // If we're at the point where we've run out of guesses, we can try and get the community to answer it
     if (typeof bestClassification === 'undefined' || bestClassification.value <= PROBABILITY_HARD_CUTOFF) {
@@ -245,6 +256,7 @@ const sendNextBestQuestionGuess = async (question: string, threadContext: Thread
     sendAnswerAndGatherFeedback(
         question,
         labelledQuestionWithAnswer,
+        probability,
         threadContext.classifications,
         threadContext.threadId
     )
@@ -268,7 +280,7 @@ const startNewQuestionAnswerAcquision = async (question: string, threadId: strin
 
     // Begin the acquisition process
     const acquisitionId = uniqid()
-    const footer = MessageAttachments.getFooter('Acquisition Code: ' + acquisitionId)
+    const footer = MessageAttachments.getFooterAttachment('Acquisition Code: ' + acquisitionId)
 
     // Create a acquisition using the unique ID
     stateCache.deleteThreadState(threadId)
@@ -280,7 +292,7 @@ const startNewQuestionAnswerAcquision = async (question: string, threadId: strin
     // Message the rest of the channel asking them for the answer using the acquisition ID
     slackUtils.sendMessageWithAttachments('<@' + askingUser + '> asked this question:\n' +
         '>>>```' + question + '```' + '\n*Please reply to this message as a thread with your answer if you know it!*',
-        footer)
+        [footer])
 }
 
 /**
@@ -301,9 +313,6 @@ const acquireNewQuestionAnswer = async (answer: string, acquisition: AnswerAcqui
     stateCache.deleteAcquisitionState(acquisition.id)
 
     slackUtils.sendMessage('Thanks for making me smarter!', threadId)
-
-    // Retrain
-    trainClassifier()
 }
 
 /**
@@ -332,13 +341,13 @@ const startImproveExistingAnswerAcquisition = async (
 
     // Create a acquisition using the unique ID
     stateCache.setImproveAnswerAcquisitionState(acquisitionId, improveAcquisition)
-    const footer = MessageAttachments.getFooter('Acquisition Code: ' + acquisitionId)
+    const footer = MessageAttachments.getFooterAttachment('Acquisition Code: ' + acquisitionId)
 
     // Message the rest of the channel asking them for the answer using the acquisition ID
     slackUtils.sendMessageWithAttachments('<@' + userId + '> said this answer could be improved:\n' +
         '>>>```' + answerToImprove.answer + '```' + '\n*Please reply to this message as a thread with the improved ' +
         'answer if you can!*',
-        footer)
+        [footer])
 
 }
 
@@ -361,9 +370,6 @@ const acquireImproveExistingAnswer = async (
     stateCache.deleteImproveAnswerAcquisitionState(acquisition.id)
 
     slackUtils.sendMessage('Thanks for making me smarter!', threadId)
-
-    // Retrain
-    trainClassifier()
 }
 
 /**
@@ -381,6 +387,11 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
 
     console.log(event.ts + ' Receieved message: ' + message)
 
+    if (message === 'DUMP') {
+        slackUtils.sendTextSnippet(storage.getDb().getData('/'))
+        return
+    }
+
     // Work out context
     const isQuestion = message.indexOf('?') > -1
     const replyId = event.ts
@@ -391,7 +402,7 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
 
         // Allow a param to force it to get the answer for a new question.
         if (!classifierTrained || message.indexOf('***! ') > -1) {
-            message = message.replace('***! ', '');
+            message = message.replace('***! ', '')
             startNewQuestionAnswerAcquision(message, replyId)
             return
         }
@@ -450,7 +461,7 @@ loadClassifier()
 
 app.listen(port, () => console.log(`App listening on port ${port}!`))
 
-//If verifying, comment out the app.listen line above and uncomment the below
+// If verifying, comment out the app.listen line above and uncomment the below
 //
 // let exec = require('child_process').exec,
 //     child
@@ -463,3 +474,20 @@ app.listen(port, () => console.log(`App listening on port ${port}!`))
 //             console.log('exec error:', error)
 //         }
 //     })
+
+/**
+ * This function monitors the classifier file and reloads the classifier
+ * if the file has been changed. This happens externally in poller.ts
+ *
+ * Poller.ts monitors the qaData - if it changes (by this app) then it
+ * retrains a new classifier and saves it to classifier.json, this app uses
+ * the classifier.json file to do the classification.
+ *
+ * It takes time to train the classifier, which is why it's done in a separate
+ * app (poller.ts)
+ */
+const classifierFile = './storage/classifier.json'
+fs.watchFile(classifierFile, (curr, prev) => {
+    console.log('Reloading classifier')
+    loadClassifier()
+})
