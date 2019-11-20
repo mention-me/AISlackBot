@@ -15,14 +15,27 @@ export const trainFromDb = async (db: JsonDB, outputLocation: string) => {
     let documentCount = 0
 
     // For each question "label", add the variants to the classifier
-    Object.keys(trainingData).forEach((element) => {
+    Object.keys(trainingData).forEach((label) => {
         documentCount++
-        const documment: QuestionWithAnswer = trainingData[element]
+        const document: QuestionWithAnswer = trainingData[label]
 
-        documment.questions.forEach((question: string) => {
+        document.questions.forEach((question: string) => {
             // For each question matching that label (question variants)
-            messageClassifier.addDocument(question, element)
+            messageClassifier.addDocument(question, label)
         })
+
+        /**
+         * Often, the answer to the question is already in the answer (if that makes sense). So let's say for example
+         * The answer is:
+         *  "The tempersature of the office is 30 degrees!"
+         *
+         *  An appropriate question might be
+         *  "What is the temperature of the office?"
+         *
+         *  So this function adds the answer to the list of questions which match the answer so the classifier can
+         *  use it as a heuristic to finding the same answer (as well as the questions).
+         */
+        messageClassifier.addDocument(document.answer, label)
 
     })
 
