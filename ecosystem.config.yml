@@ -1,7 +1,6 @@
 apps:
     - script   : "npm start"
       name     : 'Slack App'
-      instances: 4
       exec_mode: cluster
     - script : "npm startpoll"
       name   : 'Classifier poller'
