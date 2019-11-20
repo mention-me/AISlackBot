@@ -1,7 +1,7 @@
 import * as DotEnv from 'dotenv'
 import express from 'express'
 import * as fs from 'fs'
-import {BayesClassifierClassification, LogisticRegressionClassifier} from 'natural'
+import {LogisticRegressionClassification, LogisticRegressionClassifier} from 'natural'
 import uniqid from 'uniqid'
 
 import {AnswerFeedbackResponses} from './Enums/Internal/AnswerFeedbackResponses'
@@ -36,7 +36,6 @@ let classifierTrained = false
  */
 
 const loadClassifier = async () => {
-    console.log('loading')
 
     // If no corpus, not much point in loading the classifier, so reinitialise
     if (!fs.existsSync('storage/qaData.json')) {
@@ -136,7 +135,7 @@ const sendAnswerAndGatherFeedback = (
     usersQuestion: string,
     guessedAnswer: QuestionWithAnswer,
     probability: number,
-    classifications: BayesClassifierClassification[],
+    classifications: LogisticRegressionClassification[],
     threadId: string) => {
 
     const percent = Math.round(probability * 100)
@@ -476,10 +475,19 @@ app.listen(port, () => console.log(`App listening on port ${port}!`))
 //         }
 //     })
 
+/**
+ * This function monitors the classifier file and reloads the classifier
+ * if the file has been changed. This happens externally in poller.ts
+ *
+ * Poller.ts monitors the qaData - if it changes (by this app) then it
+ * retrains a new classifier and saves it to classifier.json, this app uses
+ * the classifier.json file to do the classification.
+ *
+ * It takes time to train the classifier, which is why it's done in a separate
+ * app (poller.ts)
+ */
 const classifierFile = './storage/classifier.json'
-
 fs.watchFile(classifierFile, (curr, prev) => {
-    console.log('CLASSIFIER HAS CHANGED')
+    console.log('Reloading classifier')
     loadClassifier()
-
 })
