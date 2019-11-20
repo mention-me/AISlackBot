@@ -21,7 +21,7 @@ import {QAStorage} from './Utils/StorageUtils'
 DotEnv.config()
 
 const port = process.env.PORT
-const PROBABILITY_HARD_CUTOFF = 0.15
+const PROBABILITY_HARD_CUTOFF = 0.65
 
 const app = express()
 

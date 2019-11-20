@@ -1,7 +1,5 @@
 apps:
-    - script   : "npm start"
-      name     : 'Slack App'
-      exec_mode: cluster
-    - script : "npm startpoll"
-      name   : 'Classifier poller'
-      watch  : true
+    -   script: "npm start"
+        name: 'Slack App'
+    -   script: "npm run startpoll"
+        name: 'Classifier poller'
