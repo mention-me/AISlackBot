@@ -392,6 +392,11 @@ const handleIncomingSlackMessage = async (message: string, event: MessageEvent) 
         return
     }
 
+    if (message === 'DUMPCLASSIFIER') {
+        slackUtils.sendTextSnippet(fs.readFileSync('./storage/classifier.json').toString())
+        return
+    }
+
     // Work out context
     const isQuestion = message.indexOf('?') > -1
     const replyId = event.ts
