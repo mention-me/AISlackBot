@@ -1,7 +1,7 @@
 import * as DotEnv from 'dotenv'
 import express from 'express'
 import * as fs from 'fs'
-import {LogisticRegressionClassification, LogisticRegressionClassifier} from 'natural'
+import {BayesClassifierClassification, LogisticRegressionClassifier} from 'natural'
 import uniqid from 'uniqid'
 
 import {AnswerFeedbackResponses} from './Enums/Internal/AnswerFeedbackResponses'
@@ -135,7 +135,7 @@ const sendAnswerAndGatherFeedback = (
     usersQuestion: string,
     guessedAnswer: QuestionWithAnswer,
     probability: number,
-    classifications: LogisticRegressionClassification[],
+    classifications: BayesClassifierClassification[],
     threadId: string) => {
 
     const percent = Math.round(probability * 100)

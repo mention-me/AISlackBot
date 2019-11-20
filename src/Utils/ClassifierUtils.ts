@@ -1,5 +1,5 @@
 import * as natural from 'natural'
-import {LogisticRegressionClassification, LogisticRegressionClassifier} from 'natural'
+import {BayesClassifierClassification, LogisticRegressionClassifier} from 'natural'
 import JsonDB from 'node-json-db'
 
 import {QuestionWithAnswer} from '../Interfaces/Internal/QuestionWithAnswer'
@@ -68,13 +68,13 @@ export const interpret = (phrase: string, classifier: LogisticRegressionClassifi
  * @param answerToRemove
  */
 export const removeAnswerFromProbabilities = async (
-    probabilities: LogisticRegressionClassification[],
+    probabilities: BayesClassifierClassification[],
     answerToRemove: string) => {
 
     const newProbabilities = []
 
     for (const probability of probabilities) {
-        const item: LogisticRegressionClassification = probability
+        const item: BayesClassifierClassification = probability
 
         if (item.label !== answerToRemove) {
             newProbabilities.push(item)

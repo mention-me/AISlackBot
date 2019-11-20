@@ -1,4 +1,4 @@
-import {LogisticRegressionClassification} from 'natural'
+import {BayesClassifierClassification} from 'natural'
 
 import {QuestionWithAnswer} from './QuestionWithAnswer'
 import {ThreadContext} from './ThreadContext'
@@ -12,5 +12,5 @@ export interface ThreadContextGuessedAnswer extends ThreadContext {
     // The current best guess from the classifier
     guessedAnswer: QuestionWithAnswer
     // Other classifications which _could_ answer the question above
-    classifications: LogisticRegressionClassification[]
+    classifications: BayesClassifierClassification[]
 }
