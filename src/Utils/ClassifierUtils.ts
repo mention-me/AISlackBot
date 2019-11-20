@@ -56,7 +56,8 @@ export const interpret = (phrase: string, classifier: LogisticRegressionClassifi
     const guess = guesses.reduce((x: any, y: any) => x && x.value > y.value ? x : y)
     return {
         probabilities: guesses,
-        guess: guess.value > (0.5) ? guess.label : null
+        guess: guess.value > (0.5) ? guess.label : null,
+        probability: guess.value
     }
 }
 
