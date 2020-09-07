@@ -50,7 +50,7 @@ export class SlackUtils {
         this.webClient.chat.postMessage({
             channel: this.slackChannel,
             text: message,
-            ts: threadId,
+            thread_ts: threadId,
             attachments
         })
     }
