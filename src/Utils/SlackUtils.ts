@@ -61,9 +61,9 @@ export class SlackUtils {
      * @param threadTimestamp
      */
     public getThread = async (threadTimestamp: string) => {
-        return await this.webClient.channels.replies({
+        return await this.webClient.conversations.replies({
             channel: this.slackChannel,
-            thread_ts: threadTimestamp
+            ts: threadTimestamp
         }) as unknown as MessageThreadEvent
     }
 
