@@ -31,6 +31,9 @@ const slackUtils = new SlackUtils()
 
 let classifier: LogisticRegressionClassifier
 let classifierTrained = false
+
+process.on('warning', (e) => console.warn(e.stack))
+
 /**
  * ./ngrok http -subdomain=subdomain 3000
  */
